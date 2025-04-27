@@ -1,61 +1,42 @@
 import json
 from unittest.mock import patch, MagicMock
-from decimal import Decimal
 from stock_analysis.api.handler import lambda_handler
 
 
-@patch("boto3.client")
-@patch("boto3.resource")
-def test_lambda_handler(mock_boto3_resource, mock_boto3_client):
+@patch("yfinance.Ticker")
+def test_lambda_handler(mock_ticker):
     # Create event
     event = {
         "httpMethod": "GET",
-        "path": "/stocks",
+        "path": "/api/stocks",
         "queryStringParameters": {"symbol": "AAPL"},
         "headers": {"Content-Type": "application/json"},
     }
 
-    # Create mock table
-    mock_table = MagicMock()
-    mock_boto3_resource.return_value = MagicMock()
-    mock_boto3_resource.return_value.Table.return_value = mock_table
-
-    # Mock DynamoDB query response
-    mock_table.query.return_value = {
-        "Items": [
-            {
-                "symbol": "AAPL",
-                "timestamp": "2025-04-27T10:00:00Z",
-                "price": "150.00",
-                "data": {
-                    "quoteResponse": {
-                        "result": [
-                            {
-                                "symbol": "AAPL",
-                                "regularMarketPrice": Decimal("150.00"),
-                                "regularMarketTime": "2025-04-27T10:00:00Z",
-                            }
-                        ]
-                    }
-                },
-            }
-        ]
+    # Mock yfinance response
+    mock_ticker_instance = MagicMock()
+    mock_ticker_instance.info = {
+        "symbol": "AAPL",
+        "regularMarketPrice": 150.00,
+        "regularMarketVolume": 1000000,
+        "marketCap": 2500000000000,
+        "longBusinessSummary": "Apple Inc."
     }
+    mock_ticker.return_value = mock_ticker_instance
 
     response = lambda_handler(event, None)
 
     assert response["statusCode"] == 200
     body = json.loads(response["body"])
     assert body["symbol"] == "AAPL"
-    mock_table.query.assert_called_once()
+    assert float(body["price"]) == 150.00
 
 
-@patch("boto3.client")
-@patch("boto3.resource")
-def test_lambda_handler_missing_symbol(mock_boto3_resource, mock_boto3_client):
+@patch("yfinance.Ticker")
+def test_lambda_handler_missing_symbol(mock_ticker):
     event = {
         "httpMethod": "GET",
-        "path": "/stocks",
+        "path": "/api/stocks",
         "queryStringParameters": {},
         "headers": {"Content-Type": "application/json"},
     }

@@ -1,66 +1,13 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Stock Analysis Project - A serverless application for analyzing stock data.
+Description: Stock Analysis Project
 
 Globals:
   Function:
     Timeout: 10
-    Environment:
-      Variables:
-        BUCKET_NAME: !Ref StockDataBucket
-        TABLE_NAME: !Ref StockDataTable
-        LOG_LEVEL: INFO
-    Layers:
-      - !Ref DependencyLayer
+    Runtime: python3.9
 
 Resources:
-  DependencyLayer:
-    Type: AWS::Serverless::LayerVersion
-    Properties:
-      LayerName: stock-analysis-dependencies
-      Description: Dependencies for stock analysis functions
-      ContentUri: layer/
-      CompatibleRuntimes:
-        - python3.9
-      RetentionPolicy: Retain
-
-  StockDataBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub ${AWS::StackName}-stock-data
-      LifecycleConfiguration:
-        Rules:
-          - Id: DeleteOldData
-            Status: Enabled
-            ExpirationInDays: 30
-
-  StockDataTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: !Sub ${AWS::StackName}-stock-data
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: symbol
-          AttributeType: S
-        - AttributeName: timestamp
-          AttributeType: S
-      KeySchema:
-        - AttributeName: symbol
-          KeyType: HASH
-        - AttributeName: timestamp
-          KeyType: RANGE
-
-  ApiGateway:
-    Type: AWS::Serverless::Api
-    Properties:
-      StageName: prod
-      Cors:
-        AllowMethods: "'GET,OPTIONS'"
-        AllowHeaders: "'Content-Type'"
-        AllowOrigin: "'*'"
-      BinaryMediaTypes:
-        - "*/*"
-
   ApiHandlerFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -71,60 +18,15 @@ Resources:
         ApiRoot:
           Type: Api
           Properties:
-            RestApiId: !Ref ApiGateway
             Path: /
             Method: GET
         StaticFiles:
           Type: Api
           Properties:
-            RestApiId: !Ref ApiGateway
             Path: /static/{proxy+}
             Method: GET
         StockApi:
           Type: Api
           Properties:
-            RestApiId: !Ref ApiGateway
             Path: /api/stocks
             Method: GET
-      Policies:
-        - DynamoDBReadPolicy:
-            TableName: !Ref StockDataTable
-
-  DataCollectionFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: src/stock_analysis/collectors/
-      Handler: data_collection.lambda_handler
-      Runtime: python3.9
-      Events:
-        StockUpdateTopic:
-          Type: SNS
-          Properties:
-            Topic: !Ref StockUpdateTopic
-      Policies:
-        - S3WritePolicy:
-            BucketName: !Ref StockDataBucket
-        - DynamoDBWritePolicy:
-            TableName: !Ref StockDataTable
-
-  StockUpdateTopic:
-    Type: AWS::SNS::Topic
-    Properties:
-      TopicName: !Sub ${AWS::StackName}-stock-updates
-
-Outputs:
-  WebsiteURL:
-    Description: "URL for the Stock Analysis Dashboard"
-    Value: !Sub "https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod/"
-  
-  ApiEndpoint:
-    Description: "API Gateway endpoint URL for Stock Data"
-    Value: !Sub "https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod/api/stocks"
-
-  DataCollectionFunction:
-    Description: "ARN of the Data Collection Lambda Function"
-    Value: !GetAtt DataCollectionFunction.Arn
-
-  StockUpdateTopicARN:
-    Description: "ARN of the SNS Topic for Stock Updates"
-    Value: !Ref StockUpdateTopic
