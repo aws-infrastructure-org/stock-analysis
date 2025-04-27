@@ -11,7 +11,7 @@ echo "Creating Lambda layer directory structure..."
 mkdir -p "$LAYER_DIR"
 
 echo "Installing dependencies into the layer..."
-uv pip install -r requirements.txt --target "$LAYER_DIR"
+pip install -r requirements.txt --target "$LAYER_DIR"
 
 echo "Installing the stock_analysis package..."
 pip install -e . --target "$LAYER_DIR"
