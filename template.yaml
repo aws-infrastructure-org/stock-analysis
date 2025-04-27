@@ -30,3 +30,13 @@ Resources:
           Properties:
             Path: /api/stocks
             Method: GET
+      Environment:
+        Variables:
+          STATIC_DIR: static
+
+Outputs:
+  WebsiteURL:
+    Description: "The URL of the website hosted by the API Gateway."
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+    Export:
+      Name: "WebsiteURL"
