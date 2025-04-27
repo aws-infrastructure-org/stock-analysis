@@ -10,6 +10,7 @@ from stock_analysis.api.handler import lambda_handler
 def aws_credentials():
     """Mocked AWS Credentials for moto."""
     import os
+
     os.environ["AWS_ACCESS_KEY_ID"] = "testing"
     os.environ["AWS_SECRET_ACCESS_KEY"] = "testing"
     os.environ["AWS_SECURITY_TOKEN"] = "testing"
@@ -31,33 +32,34 @@ def dynamodb_table(dynamodb):
         TableName="test-table",
         KeySchema=[
             {"AttributeName": "symbol", "KeyType": "HASH"},
-            {"AttributeName": "timestamp", "KeyType": "RANGE"}
+            {"AttributeName": "timestamp", "KeyType": "RANGE"},
         ],
         AttributeDefinitions=[
             {"AttributeName": "symbol", "AttributeType": "S"},
-            {"AttributeName": "timestamp", "AttributeType": "S"}
+            {"AttributeName": "timestamp", "AttributeType": "S"},
         ],
-        ProvisionedThroughput={
-            "ReadCapacityUnits": 1,
-            "WriteCapacityUnits": 1
-        }
+        ProvisionedThroughput={"ReadCapacityUnits": 1, "WriteCapacityUnits": 1},
     )
 
     # Add test data
-    table.put_item(Item={
-        "symbol": "AAPL",
-        "timestamp": "2025-04-27T10:00:00Z",
-        "price": "150.00",
-        "data": {
-            "quoteResponse": {
-                "result": [{
-                    "symbol": "AAPL",
-                    "regularMarketPrice": Decimal("150.00"),
-                    "regularMarketTime": "2025-04-27T10:00:00Z"
-                }]
-            }
+    table.put_item(
+        Item={
+            "symbol": "AAPL",
+            "timestamp": "2025-04-27T10:00:00Z",
+            "price": "150.00",
+            "data": {
+                "quoteResponse": {
+                    "result": [
+                        {
+                            "symbol": "AAPL",
+                            "regularMarketPrice": Decimal("150.00"),
+                            "regularMarketTime": "2025-04-27T10:00:00Z",
+                        }
+                    ]
+                }
+            },
         }
-    })
+    )
 
     return table
 
@@ -68,9 +70,7 @@ def test_get_stock_data(dynamodb_table):
         "httpMethod": "GET",
         "path": "/stocks",
         "queryStringParameters": {"symbol": "AAPL"},
-        "headers": {
-            "Content-Type": "application/json"
-        }
+        "headers": {"Content-Type": "application/json"},
     }
 
     response = lambda_handler(event, None)
@@ -87,9 +87,7 @@ def test_get_nonexistent_stock(dynamodb_table):
         "httpMethod": "GET",
         "path": "/stocks",
         "queryStringParameters": {"symbol": "INVALID"},
-        "headers": {
-            "Content-Type": "application/json"
-        }
+        "headers": {"Content-Type": "application/json"},
     }
 
     response = lambda_handler(event, None)
