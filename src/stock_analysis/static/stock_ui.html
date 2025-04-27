@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Analysis Dashboard</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .search-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+        }
+        .stock-info {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .info-item {
+            padding: 10px;
+            background-color: white;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .info-item h3 {
+            margin: 0 0 5px 0;
+            color: #666;
+            font-size: 14px;
+        }
+        .info-item p {
+            margin: 0;
+            font-size: 18px;
+            color: #333;
+        }
+        .error {
+            color: #dc3545;
+            padding: 10px;
+            background-color: #f8d7da;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Stock Analysis Dashboard</h1>
+        <form id="stock-form" class="search-form">
+            <input type="text" id="ticker" name="ticker" placeholder="Enter Stock Symbol (e.g., AAPL)" required>
+            <button type="submit">Get Data</button>
+        </form>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        document.getElementById('stock-form').onsubmit = async function(e) {
+            e.preventDefault();
+            const ticker = document.getElementById('ticker').value.trim().toUpperCase();
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<div class="loading">Loading stock data...</div>';
+
+            try {
+                const response = await fetch(`/api/stocks?symbol=${encodeURIComponent(ticker)}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const stockData = data.data; // Accessing the nested data object
+                    let html = `
+                        <div class="stock-info">
+                            <div class="info-item">
+                                <h3>Current Price</h3>
+                                <p>$${parseFloat(data.price).toFixed(2)}</p>
+                            </div>
+                            <div class="info-item">
+                                <h3>Volume</h3>
+                                <p>${data.volume.toLocaleString()}</p>
+                            </div>
+                            <div class="info-item">
+                                <h3>Market Cap</h3>
+                                <p>$${(stockData.marketCap / 1e9).toFixed(2)}B</p>
+                            </div>
+                            <div class="info-item">
+                                <h3>52 Week High</h3>
+                                <p>$${stockData.fiftyTwoWeekHigh.toFixed(2)}</p>
+                            </div>
+                            <div class="info-item">
+                                <h3>52 Week Low</h3>
+                                <p>$${stockData.fiftyTwoWeekLow.toFixed(2)}</p>
+                            </div>
+                            <div class="info-item">
+                                <h3>PE Ratio</h3>
+                                <p>${stockData.forwardPE ? stockData.forwardPE.toFixed(2) : 'N/A'}</p>
+                            </div>
+                        </div>
+                        <div class="info-item" style="margin-top: 15px;">
+                            <h3>Business Summary</h3>
+                            <p style="font-size: 14px;">${stockData.longBusinessSummary || 'Not available'}</p>
+                        </div>
+                    `;
+                    resultDiv.innerHTML = html;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">${data.error || 'Failed to fetch stock data'}</div>`;
+                }
+            } catch (err) {
+                resultDiv.innerHTML = `<div class="error">Request failed: ${err.message}</div>`;
+            }
+        };
+    </script>
+</body>
+</html>
