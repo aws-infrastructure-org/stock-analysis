@@ -16,7 +16,13 @@ pip install -r requirements.txt --target "$LAYER_DIR"
 echo "Installing the stock_analysis package..."
 pip install -e . --target "$LAYER_DIR"
 
-echo "Building SAM application..."
-sam build
+# Check if S3_BUCKET is set
+if [ -z "$S3_BUCKET" ]; then
+  echo "Error: S3_BUCKET environment variable is not set. Please set it to your S3 bucket name."
+  exit 1
+fi
+
+# Build SAM application with S3 bucket using samconfig.toml
+sam build --config-file samconfig.toml
 
 echo "Done! You can now deploy using: sam deploy"
