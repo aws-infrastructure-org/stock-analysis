@@ -20,7 +20,7 @@ python-dateutil==2.9.0.post0
     # via
     #   aws-serverless-dataengineer (setup.py)
     #   botocore
-requests==2.31.0
+requests==2.32.2
     # via aws-serverless-dataengineer (setup.py)
 s3transfer==0.10.4
     # via boto3
