@@ -1,12 +1,17 @@
-name: CI/CD Pipeline
+name: CI/CD and Deploy Pipeline
 
 on:
   push:
     branches:
+      - develop
       - main
   pull_request:
     branches:
       - main
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   test:
@@ -45,18 +50,16 @@ jobs:
     needs: test
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Configure AWS Credentials (Dev)
+      if: github.ref == 'refs/heads/develop'
+      uses: aws-actions/configure-aws-credentials@v4
       with:
-        python-version: '3.12'
-
-    - name: Install AWS CLI
-      run: |
-        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-        unzip awscliv2.zip
-        sudo ./aws/install
+        role-to-assume: ${{ secrets.AWS_ROLE_DEV }}
+        aws-region: us-east-1
+        role-session-name: GitHubActions
+        audience: sts.amazonaws.com
 
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v3
