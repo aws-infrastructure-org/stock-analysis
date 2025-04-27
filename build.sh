@@ -23,6 +23,7 @@ if [ -z "$S3_BUCKET" ]; then
 fi
 
 # Build SAM application with S3 bucket using samconfig.toml
+export S3_BUCKET=aws-sam-cli-managed-default-samclisourcebucket-vfojv2l9rdow
 sam build --config-file samconfig.toml
 
 echo "Done! You can now deploy using: sam deploy"
