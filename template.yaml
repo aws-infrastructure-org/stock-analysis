@@ -1,0 +1,96 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Description: Serverless Stock Analysis Application
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 30
+    MemorySize: 256
+    Architectures: [x86_64]
+    Environment:
+      Variables:
+        PYTHONPATH: /opt/python:/var/task/src
+        ENVIRONMENT: production
+
+Resources:
+  DataCollectionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: stock_analysis.collectors.data_collection.lambda_handler
+      CodeUri: src/
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref RawDataBucket
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref RawDataBucket
+      Events:
+        ScheduledEvent:
+          Type: Schedule
+          Properties:
+            Schedule: rate(1 day)
+      Layers:
+        - !Ref DependencyLayer
+
+  StockAPIFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: stock_analysis.api.handler.lambda_handler
+      CodeUri: src/
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref RawDataBucket
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref RawDataBucket
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+      Layers:
+        - !Ref DependencyLayer
+
+  DependencyLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: stock-analysis-dependencies
+      Description: Dependencies for stock analysis functions
+      ContentUri: .
+      CompatibleRuntimes:
+        - python3.12
+      RetentionPolicy: Retain
+
+  RawDataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${AWS::StackName}-stock-data-raw
+      LifecycleConfiguration:
+        Rules:
+          - Id: CleanupOldData
+            Status: Enabled
+            ExpirationInDays: 30
+
+  ProcessedDataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${AWS::StackName}-stock-data-processed
+
+  AnalysisResultsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${AWS::StackName}-analysis-results
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: symbol
+          AttributeType: S
+        - AttributeName: date
+          AttributeType: S
+      KeySchema:
+        - AttributeName: symbol
+          KeyType: HASH
+        - AttributeName: date
+          KeyType: RANGE
