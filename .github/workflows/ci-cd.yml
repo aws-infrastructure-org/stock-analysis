@@ -29,11 +29,10 @@ jobs:
     - name: Install dependencies
       run: |
         python -m venv venv
-        . ./activate_venv.sh
+        source venv/bin/activate
         pip install --upgrade pip
         pip install uv pytest
         uv pip install -r requirements.txt
-
     - name: Run linting
       run: |
         source venv/bin/activate
@@ -41,13 +40,11 @@ jobs:
         pip install uv black isort flake8
         # black --check .
         # isort --check-only .
-        # flake8
-
+        #flake8
     - name: Run tests
       run: |
         source venv/bin/activate
         pytest --cov=src --cov-report=xml
-
   deploy:
     runs-on: ubuntu-latest
     needs: build
